@@ -1,12 +1,23 @@
 extern crate rustyline;
 
+mod lib;
+use lib::engine::Engine;
+
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
-struct Repl;
+struct Repl {
+    engine: Engine,
+}
 
 impl Repl {
-    pub fn run() {
+    pub fn new() -> Self {
+        Repl {
+            engine: Engine::new(),
+        }
+    }
+
+    pub fn run(&self) {
         let mut rl = Editor::<()>::new();
 
         if rl.load_history("history.txt").is_err() {
@@ -18,18 +29,22 @@ impl Repl {
             match readline {
                 Ok(line) => {
                     rl.add_history_entry(line.as_str());
-                },
+                    match self.engine.parse(line) {
+                        Ok(()) => (),
+                        Err(e) => println!("{}", e),
+                    }
+                }
                 Err(ReadlineError::Interrupted) => {
                     println!("CTRL-C");
-                    break
-                },
+                    break;
+                }
                 Err(ReadlineError::Eof) => {
                     println!("CTRL-D");
-                    break
-                },
+                    break;
+                }
                 Err(err) => {
                     println!("Error: {:?}", err);
-                    break
+                    break;
                 }
             }
         }
@@ -39,5 +54,5 @@ impl Repl {
 }
 
 fn main() {
-    Repl::run()
+    Repl::new().run()
 }
