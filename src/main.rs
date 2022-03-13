@@ -1,10 +1,14 @@
+extern crate clap;
 extern crate rustyline;
 
 mod lib;
 use lib::engine::Engine;
+use std::path::PathBuf;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
+
+use clap::{arg, Command};
 
 struct Repl {
     engine: Engine,
@@ -17,7 +21,7 @@ impl Repl {
         }
     }
 
-    pub fn run(&self) {
+    pub fn run(&mut self) {
         let mut rl = Editor::<()>::new();
 
         if rl.load_history("history.txt").is_err() {
@@ -29,8 +33,9 @@ impl Repl {
             match readline {
                 Ok(line) => {
                     rl.add_history_entry(line.as_str());
-                    match self.engine.parse(line) {
-                        Ok(()) => (),
+                    let mut l = line.clone();
+                    match self.engine.parse(l) {
+                        Ok(token) => println!("{:?}", token),
                         Err(e) => println!("{}", e),
                     }
                 }
@@ -54,5 +59,22 @@ impl Repl {
 }
 
 fn main() {
-    Repl::new().run()
+    let matches = Command::new("lex")
+        .arg(arg!(<PATH>..."file path"))
+        .subcommand(Command::new("repl").about("run repl"))
+        .get_matches();
+
+    match matches.subcommand() {
+        Some(("repl", _)) => {
+            Repl::new().run();
+        }
+        _ => {
+            let path = matches.value_of("PATH").unwrap_or_default();
+            let file = std::fs::read_to_string(path).unwrap();
+            match Engine::new().parse(file.to_owned()) {
+                Err(err) => println!("{:?}", err),
+                _ => (),
+            }
+        }
+    };
 }

@@ -1,11 +1,18 @@
 #[derive(Debug, Clone)]
 pub enum Token {
-    LST(Vec<Token>), // list
-    VAR(String),     // variable
-    STR(String),     // string
-    INT(i32),        // integer
-    FLOAT(f32),      // integer
-    BOOL(bool),      // booelan
-    SYMBOL(String),  // symbol like operator
-    UNKNOWN,
+    Lst(Vec<Token>),  // list
+    Var(String),      // variable
+    Str(String),      // string
+    Keyword(String),  // string
+    Number(f32),      // integer
+    Bool(bool),       // booelan
+    Symbol(Operator), // symbol like operator
+    Wildcard(String),
+    Unknown,
+}
+
+#[derive(Debug, Clone)]
+pub enum Operator {
+    BinaryOperator(String),
+    UnaryOperator(String),
 }

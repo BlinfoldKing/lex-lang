@@ -38,7 +38,9 @@ impl fmt::Display for ParseError {
 }
 
 #[derive(Debug, Clone)]
-pub enum EvalError {}
+pub enum EvalError {
+    UnknownOperator,
+}
 
 impl fmt::Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -1,4 +1,5 @@
 use crate::lib::error::ParseError;
+use crate::lib::token::Operator;
 use crate::lib::token::Token;
 
 fn is_newline(c: char) -> bool {
@@ -32,7 +33,6 @@ fn parse_number(input: Vec<State>) -> Result<Token, ParseError> {
             State::Num(c, _, _) => num.push(c),
             State::Symbol(c, lin, col) => match c {
                 '.' => {
-                    println!("masuk");
                     if !is_float {
                         is_float = true;
                         num.push(c);
@@ -48,13 +48,39 @@ fn parse_number(input: Vec<State>) -> Result<Token, ParseError> {
     }
 
     if is_float {
-        Ok(Token::FLOAT(num.parse().unwrap()))
+        Ok(Token::Number(num.parse().unwrap()))
     } else {
-        Ok(Token::INT(num.parse().unwrap()))
+        Ok(Token::Number(num.parse().unwrap()))
     }
 }
 
-fn parse_unquoted_string(states: Vec<State>) -> Result<Token, ParseError> {
+fn parse_quoted_string(input: Vec<State>) -> Result<Token, ParseError> {
+    let mut states = input.clone();
+    match states.first() {
+        Some(State::Symbol('"', _, _)) => {
+            if states.len() > 1 {
+                if let Some(State::Symbol('"', _, _)) = states.last() {
+                    states.remove(0);
+                    states.pop();
+                }
+            }
+        }
+        _ => {}
+    };
+    let mut st = String::new();
+    for state in states {
+        match state {
+            State::Char(c, _, _) => st.push(c),
+            State::Symbol(c, _, _) => st.push(c),
+            State::Num(c, _, _) => st.push(c),
+            _ => return Err(ParseError::UnknownError),
+        };
+    }
+
+    Ok(Token::Str(st))
+}
+fn parse_unquoted_string(input: Vec<State>) -> Result<Token, ParseError> {
+    let mut states = input.clone();
     match states.first() {
         Some(State::Char(c, _, _)) => {
             match c {
@@ -64,8 +90,15 @@ fn parse_unquoted_string(states: Vec<State>) -> Result<Token, ParseError> {
                 _ => {}
             };
         }
+        Some(State::Symbol('.', _, _)) => {
+            return parse_keyword(states);
+        }
+        Some(State::Symbol('_', _, _)) => {
+            return parse_wildcard(states);
+        }
         _ => {}
     };
+
     let mut st = String::new();
     for state in states {
         match state {
@@ -82,12 +115,64 @@ fn parse_unquoted_string(states: Vec<State>) -> Result<Token, ParseError> {
     }
 
     if st == "true" {
-        Ok(Token::BOOL(true))
+        Ok(Token::Bool(true))
     } else if st == "false" {
-        Ok(Token::BOOL(true))
+        Ok(Token::Bool(true))
     } else {
-        Ok(Token::STR(st))
+        Ok(Token::Str(st))
     }
+}
+
+fn parse_wildcard(input: Vec<State>) -> Result<Token, ParseError> {
+    let mut st = String::new();
+
+    let mut states = input.clone();
+    if let Some(State::Symbol('_', _, _)) = states.first() {
+        st.push('_');
+        states.remove(0);
+    }
+
+    for state in states {
+        match state {
+            State::Char(c, _, _) => st.push(c),
+            State::Symbol(c, lin, col) => {
+                match c {
+                    '-' | '_' => st.push(c),
+                    _ => return Err(ParseError::InvalidCharacter(c, lin, col)),
+                };
+            }
+            State::Num(c, _, _) => st.push(c),
+            _ => return Err(ParseError::UnknownError),
+        };
+    }
+
+    return Ok(Token::Wildcard(st));
+}
+
+fn parse_keyword(input: Vec<State>) -> Result<Token, ParseError> {
+    let mut st = String::new();
+
+    let mut states = input.clone();
+    if let Some(State::Symbol('.', _, _)) = states.first() {
+        st.push('.');
+        states.remove(0);
+    }
+
+    for state in states {
+        match state {
+            State::Char(c, _, _) => st.push(c),
+            State::Symbol(c, lin, col) => {
+                match c {
+                    '-' | '_' => st.push(c),
+                    _ => return Err(ParseError::InvalidCharacter(c, lin, col)),
+                };
+            }
+            State::Num(c, _, _) => st.push(c),
+            _ => return Err(ParseError::UnknownError),
+        };
+    }
+
+    return Ok(Token::Keyword(st));
 }
 
 fn parse_variable(states: Vec<State>) -> Result<Token, ParseError> {
@@ -106,7 +191,7 @@ fn parse_variable(states: Vec<State>) -> Result<Token, ParseError> {
         };
     }
 
-    return Ok(Token::VAR(st));
+    return Ok(Token::Var(st));
 }
 
 fn parse_symbol(input: Vec<State>) -> Result<Token, ParseError> {
@@ -122,7 +207,10 @@ fn parse_symbol(input: Vec<State>) -> Result<Token, ParseError> {
     }
 
     match &*sym {
-        "+" | "-" | "<" | ">" | "<=" | ">=" | "!" | "*" | "=" => Ok(Token::SYMBOL(sym)),
+        "+" | "-" | "<" | ">" | "<=" | ">=" | "*" | "=" => {
+            Ok(Token::Symbol(Operator::BinaryOperator(sym)))
+        }
+        "!" => Ok(Token::Symbol(Operator::UnaryOperator(sym))),
         _ => Err(ParseError::UnknownError),
     }
 }
@@ -140,16 +228,20 @@ fn parse_list(input: Vec<State>) -> Result<Token, ParseError> {
                     Some(State::Char(_, _, _)) => parse_unquoted_string(accumulator),
                     Some(State::Num(_, _, _)) => parse_number(accumulator),
                     Some(State::Symbol(c, _, _)) => {
-                        if *c == '-' {
+                        if *c == '.' || *c == '_' {
+                            parse_unquoted_string(accumulator)
+                        } else if *c == '"' {
+                            parse_quoted_string(accumulator)
+                        } else if *c == '-' {
                             parse_number(accumulator)
                         } else {
                             parse_symbol(accumulator)
                         }
                     }
-                    _ => Ok(Token::UNKNOWN),
+                    _ => Ok(Token::Unknown),
                 };
                 match parse_result {
-                    Ok(Token::UNKNOWN) => {}
+                    Ok(Token::Unknown) => {}
                     Ok(token) => lst.push(token),
                     Err(err) => return Err(err),
                 };
@@ -165,7 +257,7 @@ fn parse_list(input: Vec<State>) -> Result<Token, ParseError> {
         }
     }
 
-    Ok(Token::LST(lst))
+    Ok(Token::Lst(lst))
 }
 
 pub struct Parser {}
@@ -192,7 +284,6 @@ impl Parser {
                 ')' => {
                     let mut substate: Vec<State> = vec![];
                     loop {
-                        substate.insert(0, states.pop().unwrap());
                         match states.last() {
                             Some(State::LstStart(_, _)) => {
                                 break;
@@ -200,7 +291,9 @@ impl Parser {
                             None => {
                                 return Err(ParseError::MissingBracket(line));
                             }
-                            _ => {}
+                            _ => {
+                                substate.insert(0, states.pop().unwrap());
+                            }
                         }
                     }
 
@@ -223,10 +316,9 @@ impl Parser {
                 '0'..='9' => {
                     states.push(State::Num(c, line, collumn));
                 }
-                '+' | '-' | '=' | '>' | '<' | '.' | '_' => {
+                _ => {
                     states.push(State::Symbol(c, line, collumn));
                 }
-                _ => return Err(ParseError::InvalidCharacter(c, line, collumn)),
             };
         }
 
@@ -235,10 +327,10 @@ impl Parser {
         for state in states {
             match state {
                 State::Parsed(token) => result.push(token),
-                _ => return Err(ParseError::Other(line)),
+                _ => return Err(ParseError::UnknownError),
             }
         }
 
-        Ok(Token::LST(result))
+        Ok(result.first().unwrap().clone())
     }
 }
