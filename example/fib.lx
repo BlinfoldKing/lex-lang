@@ -1,0 +1,30 @@
+(.print (+ 10 10))
+(.print (- 10 10))
+(.print (* 10 10))
+(.print (/ 10 10))
+(.print (% 10 10))
+(.print (** 10 10))
+
+(.def (f 0) 0)
+(.def (f N) (f (- N 1)))
+
+(.print (f 10))
+
+(.def (fact 1) 1)
+(.def (fact N)
+    (* N
+        (fact (- N 1))))
+
+(.print (fact 1))
+(.print (fact 100))
+
+(.def (fib 0) 0)
+(.def (fib 1) 1)
+(.def (fib N)
+    (+  (fib (- N 2))
+        (fib (- N 1))))
+
+
+(.print (fib 0))
+(.print (fib 1))
+(.print (fib 10))

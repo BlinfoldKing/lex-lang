@@ -1,5 +1,8 @@
 use crate::lib::error::LexError;
-use crate::lib::evaluator::Evaluator;
+use crate::lib::evaluator::{
+    definition::{def::Def, math::Math, misc::Misc},
+    Evaluator,
+};
 use crate::lib::parser::Parser;
 use crate::lib::token::Token;
 
@@ -10,10 +13,15 @@ pub struct Engine {
 
 impl Engine {
     pub fn new() -> Self {
-        Engine {
+        let mut e = Engine {
             parser: Parser {},
             evalutator: Evaluator::new(),
-        }
+        };
+
+        e.evalutator.load(Misc {});
+        e.evalutator.load(Def {});
+        e.evalutator.load(Math {});
+        e
     }
 
     pub fn parse(&mut self, input: String) -> Result<Token, LexError> {
@@ -21,14 +29,10 @@ impl Engine {
         str.push(')');
         str.insert(0, '(');
         match self.parser.parse(str) {
-            Ok(ast) => {
-                // println!("{:?}", ast);
-
-                match self.evalutator.eval_token(ast) {
-                    Ok(token) => Ok(token),
-                    Err(err) => Err(LexError::EvalError(err)),
-                }
-            }
+            Ok(ast) => match self.evalutator.eval_token(ast) {
+                Ok(token) => Ok(token),
+                Err(err) => Err(LexError::EvalError(err)),
+            },
             Err(e) => Err(LexError::ParseError(e)),
         }
     }

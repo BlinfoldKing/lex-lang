@@ -6,13 +6,8 @@ pub enum Token {
     Keyword(String),  // string
     Number(f32),      // integer
     Bool(bool),       // booelan
-    Symbol(Operator), // symbol like operator
+    BinaryOp(String), // symbol like operator
+    UnaryOp(String),  // symbol like operator
     Wildcard(String),
     Unknown,
-}
-
-#[derive(Debug, Clone)]
-pub enum Operator {
-    BinaryOperator(String),
-    UnaryOperator(String),
 }

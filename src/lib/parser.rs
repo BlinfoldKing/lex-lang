@@ -1,5 +1,4 @@
 use crate::lib::error::ParseError;
-use crate::lib::token::Operator;
 use crate::lib::token::Token;
 
 fn is_newline(c: char) -> bool {
@@ -20,13 +19,14 @@ fn parse_number(input: Vec<State>) -> Result<Token, ParseError> {
     let mut is_float: bool = false;
     let mut num = String::new();
 
-    let mut states = input.clone();
-    if let Some(State::Symbol(sym, _, _)) = states.first() {
-        if *sym == '-' {
-            num.push(*sym);
-            states.remove(0);
-        }
-    }
+    let states = input.clone();
+    // TODO: handle negatives
+    //     if let Some(State::Symbol(sym, _, _)) = states.first() {
+    //         if *sym == '-' {
+    //             num.push(*sym);
+    //             states.remove(0);
+    //         }
+    //     }
 
     for state in states {
         match state {
@@ -80,7 +80,7 @@ fn parse_quoted_string(input: Vec<State>) -> Result<Token, ParseError> {
     Ok(Token::Str(st))
 }
 fn parse_unquoted_string(input: Vec<State>) -> Result<Token, ParseError> {
-    let mut states = input.clone();
+    let states = input.clone();
     match states.first() {
         Some(State::Char(c, _, _)) => {
             match c {
@@ -117,7 +117,7 @@ fn parse_unquoted_string(input: Vec<State>) -> Result<Token, ParseError> {
     if st == "true" {
         Ok(Token::Bool(true))
     } else if st == "false" {
-        Ok(Token::Bool(true))
+        Ok(Token::Bool(false))
     } else {
         Ok(Token::Str(st))
     }
@@ -207,10 +207,10 @@ fn parse_symbol(input: Vec<State>) -> Result<Token, ParseError> {
     }
 
     match &*sym {
-        "+" | "-" | "<" | ">" | "<=" | ">=" | "*" | "=" => {
-            Ok(Token::Symbol(Operator::BinaryOperator(sym)))
+        "+" | "-" | "<" | ">" | "<=" | ">=" | "*" | "=" | "**" | "%" | "/" => {
+            Ok(Token::BinaryOp(sym))
         }
-        "!" => Ok(Token::Symbol(Operator::UnaryOperator(sym))),
+        "!" => Ok(Token::UnaryOp(sym)),
         _ => Err(ParseError::UnknownError),
     }
 }
@@ -232,8 +232,6 @@ fn parse_list(input: Vec<State>) -> Result<Token, ParseError> {
                             parse_unquoted_string(accumulator)
                         } else if *c == '"' {
                             parse_quoted_string(accumulator)
-                        } else if *c == '-' {
-                            parse_number(accumulator)
                         } else {
                             parse_symbol(accumulator)
                         }

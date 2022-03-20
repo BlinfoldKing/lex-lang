@@ -61,19 +61,23 @@ impl Repl {
 fn main() {
     let matches = Command::new("lex")
         .arg(arg!(<PATH>..."file path"))
-        .subcommand(Command::new("repl").about("run repl"))
         .get_matches();
 
     match matches.subcommand() {
-        Some(("repl", _)) => {
-            Repl::new().run();
-        }
         _ => {
-            let path = matches.value_of("PATH").unwrap_or_default();
-            let file = std::fs::read_to_string(path).unwrap();
-            match Engine::new().parse(file.to_owned()) {
-                Err(err) => println!("{:?}", err),
-                _ => (),
+            let p = matches.value_of("PATH");
+
+            match p {
+                Some(path) => {
+                    let file = std::fs::read_to_string(path).unwrap();
+                    match Engine::new().parse(file.to_owned()) {
+                        Err(err) => println!("{:?}", err),
+                        _ => (),
+                    }
+                }
+                None => {
+                    Repl::new().run();
+                }
             }
         }
     };

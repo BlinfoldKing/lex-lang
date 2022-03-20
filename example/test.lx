@@ -1,0 +1,10 @@
+(.dec (buy apple))
+(.dec (buy orange))
+(.def (buy X) false)
+
+(.def (checkout X)
+    (buy X))
+
+(.print (checkout grape))
+(.print (checkout apple))
+(.print (checkout Y))

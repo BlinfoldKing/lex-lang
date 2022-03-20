@@ -1,4 +1,3 @@
-use crate::lib::token::Operator;
 use crate::lib::token::Token;
 
 pub fn print_token(token: Token) {
@@ -12,11 +11,11 @@ pub fn print_token_with_depth(token: Token, depth: i32) {
         Token::Str(str) => print!("{} ", str),
         Token::Var(var) => print!("{} ", var),
         Token::Number(num) => print!("{} ", num),
-        Token::Bool(b) => print!("{}", b),
+        Token::Bool(b) => print!("{} ", b),
         Token::Keyword(keyword) => print!("{} ", keyword),
         Token::Wildcard(wildcard) => print!("{} ", wildcard),
-        Token::Symbol(Operator::BinaryOperator(op)) => print!("{} ", op),
-        Token::Symbol(Operator::UnaryOperator(op)) => print!("{} ", op),
+        Token::BinaryOp(op) => print!("{} ", op),
+        Token::UnaryOp(op) => print!("{} ", op),
         _ => print!(" "),
     }
 }
