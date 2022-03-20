@@ -5,6 +5,6 @@
 cargo run <file>.lx
 ```
 
-[] write and organize example
-[] rewrite parser (consider using pest.rs maybe)
-[] implement variable query
+[ ] write and organize example  
+[ ] rewrite parser (consider using pest.rs maybe)  
+[ ] implement variable query  
